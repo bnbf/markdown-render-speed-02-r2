@@ -952,8 +952,11 @@ class Doc {
       // a line that is blank after container markers were removed counts
       // as a blank line when nothing remains, or when only whitespace
       // remains and no paragraph is open to absorb it (">  " leaves a
-      // space, which is paragraph content, not a blank line)
-      const blankLine = blank || rest === '' || (isBlank(rest) && !(lf && lf.t === 'para'));
+      // space, which is paragraph content, not a blank line). A tab-only
+      // line is NOT blank inside a table: marked renders it as an empty
+      // row (and keeps the table open for the following lines).
+      const tabInTable = lf && lf.t === 'table' && this.rawLines[ln].indexOf('\t') !== -1;
+      const blankLine = !tabInTable && (blank || rest === '' || (isBlank(rest) && !(lf && lf.t === 'para')));
       if (blankLine) {
         // a blank line inside a code block / fence is part of it, but only
         // when the line matched the block's containers (a blank line that
