@@ -682,7 +682,7 @@ function findLabelEnd(s, i) {
           p = q;
         } else p++;
       }
-      if (found === -1) return -2;
+      if (found === -1) { j = k; continue; } // unmatched run is literal text; keep scanning for ']'
       j = found + run;
       continue;
     }
@@ -1132,6 +1132,18 @@ class Doc {
             open.push(list);
           }
           const item = { t: 'item', contentIndent: li.contentIndent, children: [], trailingBlank: false };
+          // a blank line directly before this item separates it from the
+          // previous item of the same list, so that item ends blank and
+          // the list is loose (blankOpen is cleared after each non-blank
+          // line, so this only fires for an immediately preceding blank)
+          if (list.children.length && blankOpen !== null && blankOpen.includes(list)) {
+            // a blank line nested inside a blockquote does not separate
+            // items of this list (it belongs to the quote, not the list)
+            const innermost = blankOpen[blankOpen.length - 1];
+            if (!innermost || innermost.t !== 'blockquote') {
+              list.children[list.children.length - 1].trailingBlank = true;
+            }
+          }
           list.children.push(item);
           open.push(item);
           r = li.rest;
@@ -1178,6 +1190,9 @@ class Doc {
         }
         break;
       }
+      // a blank line only separates the block created on the very next
+      // non-blank line; clear it so later blocks do not inherit it
+      blankOpen = null;
     }
     closeFrom(1);
     // An HTML block that ends the document carries a trailing newline only
